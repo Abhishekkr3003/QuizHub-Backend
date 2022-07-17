@@ -1,6 +1,3 @@
-from crypt import methods
-from pickle import FALSE
-from pydoc import plain
 from datetime import datetime
 from flask import Flask, jsonify, request
 import firebase_admin
@@ -153,7 +150,7 @@ def match_ans():
                 score += q_score
 
         db.collection("quizzes").document(data['quiz_id']).collection(
-            "players").document(data['player_id']).set({"questions": questions, "score": score})
+            "players").document(data['player_id']).set({"questions": questions, "score": score, "name": data['player_name']})
 
         return response
 
@@ -240,8 +237,14 @@ def get_quiz_id():
     try:
         body = request.json
         doc = db.collection("users").document(body['user_id']).get()
-        response = doc.to_dict()
+        user_quiz = doc.to_dict()
+        quiz_data = {}
+        response = {}
+        for quiz_id in user_quiz['quizzes'].keys():
+            quiz_data[quiz_id] = db.collection(
+                u"quizzes").document(quiz_id).get().to_dict()
         response['success'] = True
+        response['quiz_info'] = quiz_data
         return response
 
     except Exception as e:
@@ -278,6 +281,22 @@ def get_quiz_info_by_id():
 
         response['success'] = True
         return response
+
+    except Exception as e:
+        response = {
+            "Success": False,
+            "Error": str(e)
+        }
+        return response
+
+
+@app.route("/updateEndTime", methods=['POST'])
+def update_end_time():
+    try:
+        body = request.json
+        db.collection(u"quizzes").document(
+            body['quiz_id']).update({"startTime": body['endTime'], "endTime": body['endTime'], "endDate": body['endDate'], "startDate": body['endDate']})
+        return {"success": True}
 
     except Exception as e:
         response = {
